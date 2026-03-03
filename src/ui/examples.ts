@@ -11,15 +11,19 @@ enes100.println("Starting driving")
 tank.set_left_motor_pwm(255)
 tank.set_right_motor_pwm(255)
 
-# Main loop - print position every second
-while True:
+# Print position 10 times (instead of infinite loop)
+for i in range(10):
     time.sleep(1)
     enes100.print("X = ")
     enes100.println(enes100.get_x())
     enes100.print("Y = ")
     enes100.println(enes100.get_y())
     enes100.print("Theta = ")
-    enes100.println(enes100.get_theta())`
+    enes100.println(enes100.get_theta())
+
+# Stop the robot
+tank.turn_off_motors()
+enes100.println("Program complete!")`
 
 export const testExample = `import time
 
@@ -88,7 +92,4 @@ tank.set_right_motor_pwm(100)
 time.sleep(1)
 tank.turn_off_motors()
 
-# Loop test
-while True:
-    time.sleep(1)
-    enes100.println("Hello, World! (from loop)")`
+enes100.println("All tests passed!")`
