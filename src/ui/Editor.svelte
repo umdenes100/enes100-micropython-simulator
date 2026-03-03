@@ -9,7 +9,6 @@
     import 'ace-builds/src-noconflict/ext-language_tools';
     import {setCompleters, textCompleter} from 'ace-builds/src-noconflict/ext-language_tools';
 
-    import {checkCode} from "../sim/checkCode";
     import {code, showVariables} from "../state";
     import VariablesTable from "./VariablesTable.svelte";
     import stopSVG from "./buttons/stop.svg";
@@ -108,24 +107,15 @@
     }
 
     function run() {
-        // @ts-ignore
-        const [fixedCode, success] = checkCode(editor.getValue());
-        // console.log(success, fixedCode)
-        code.set(fixedCode);
-        editor.setValue(fixedCode)
-        if (!success) return;
-
-        startCode(`
-${fixedCode}
-int main() {
-    setup();
-    while(1) {
-        loop();
-    }
-    return 0;
-}`, interval)
-        resize();
-    }
+    // For Python, we don't need setup/loop validation
+    // Just save the code and run it directly
+    const userCode = editor.getValue();
+    code.set(userCode);
+    
+    // Run the Python code (no C++ wrapper needed)
+    startCode(userCode, interval);
+    resize();
+}
 
     let intervalIndex = storable('Editor.intervalIndex', 2);
     $: interval = [100, 50, 1][$intervalIndex]
