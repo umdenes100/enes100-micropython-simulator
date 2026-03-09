@@ -1,0 +1,6 @@
+enes100.begin("Simulator", FIRE, 3)
+enes100.println("Starting test...")
+tank.begin()
+tank.set_left_motor_pwm(100)
+tank.set_right_motor_pwm(100)
+enes100.println("Motors set!")

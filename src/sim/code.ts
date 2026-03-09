@@ -41,6 +41,8 @@ type Session = {
 
 export const session: Writable<Session | undefined> = writable(undefined);
 
+let loopInterval: number | undefined;
+
 export async function startCode(code: string, interval: number = 100) {
     if (!isInitialized || !micropython) {
         output.update(o => o + '\n❌ MicroPython not initialized. Please refresh the page.\n');
@@ -58,16 +60,15 @@ export async function startCode(code: string, interval: number = 100) {
     
     const sessionId = generateID();
     session.set({
-        stop: () => session.set(undefined),
+        stop: stopCodeExecution,
         running: true,
         id: sessionId
     });
     
     try {
-        // Wrap user's code with Python imports and wrapper classes
-        const wrappedCode = `
+        // First, set up the Python environment with wrapper code
+        const wrapperCode = `
 import js
-import time
 
 # Get constants from Enes100
 constants = js.Enes100Constants
@@ -133,10 +134,8 @@ class Tank:
     def read_bump_sensor(sensor_id):
         return js.TankAPI.readBumpSensor(sensor_id)
 
-# Create tank instance that students will use
 tank = Tank()
 
-# Enes100 functions wrapper with ALL methods
 class Enes100:
     @staticmethod
     def begin(team_name, team_type, marker_id, room=0, tx=0, rx=0):
@@ -174,53 +173,77 @@ class Enes100:
     def mission(mission_type, message):
         return js.Enes100API.mission(mission_type, message)
 
-# Create enes100 instance that students will use
 enes100 = Enes100()
 
-# Helper function for coordinate
 def coordinate(x, y):
     return js.Enes100API.coordinate(x, y)
 
-# Override print to use Enes100.println
 _original_print = print
 def print(*args, **kwargs):
-    # Convert all args to string and join with spaces
     message = ' '.join(str(arg) for arg in args)
     enes100.println(message)
 
-# ===== USER CODE STARTS HERE =====
+# User's code goes here
 ${code}
 `;
         
-        console.log('Running Python code...');
-        console.log('Wrapped code:', wrappedCode);
+        console.log('Running setup()...');
         
-        // Run the Python code
-        const stdout = await runPythonCode(micropython, wrappedCode);
+        // Run the wrapper + user code to define setup() and loop()
+        await runPythonCode(micropython, wrapperCode);
         
-        // Add stdout to output if there was any
-        if (stdout) {
-            output.update(o => o + stdout);
+        // Now call setup() once
+        try {
+            await runPythonCode(micropython, 'setup()');
+            console.log('setup() completed');
+        } catch (err: any) {
+            if (err.message.includes("name 'setup' is not defined")) {
+                output.update(o => o + '\n❌ Error: Your code must define a setup() function\n');
+                throw new Error('setup() function not found');
+            }
+            throw err;
         }
         
-        output.update(o => o + '\n✓ Program finished\n');
+        // Now call loop() repeatedly
+        console.log('Starting loop()...');
+        loopInterval = setInterval(async () => {
+            try {
+                if (!get(session)) {
+                    clearInterval(loopInterval);
+                    return;
+                }
+                await runPythonCode(micropython, 'loop()');
+            } catch (err: any) {
+                console.error('Error in loop():', err);
+                if (err.message.includes("name 'loop' is not defined")) {
+                    output.update(o => o + '\n❌ Error: Your code must define a loop() function\n');
+                }
+                clearInterval(loopInterval);
+                session.set(undefined);
+            }
+        }, interval);
         
     } catch (err: any) {
         console.error('Python execution error:', err);
         const errorMsg = err.message || String(err);
         output.update(o => o + '\n❌ Error: ' + errorMsg + '\n');
-    } finally {
-        if (get(session)?.id === sessionId) {
-            session.set(undefined);
-        }
+        session.set(undefined);
     }
 }
 
-export function stopCode() {
+function stopCodeExecution() {
+    if (loopInterval) {
+        clearInterval(loopInterval);
+        loopInterval = undefined;
+    }
     session.set(undefined);
 }
 
-// Compatibility exports (these are no longer used but kept to avoid breaking changes)
+export function stopCode() {
+    stopCodeExecution();
+}
+
+// Compatibility exports
 export const ignored_variables = new Set<string>();
 export function addIgnoredVariable(v: string) {
     ignored_variables.add(v);
