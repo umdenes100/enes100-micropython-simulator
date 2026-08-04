@@ -1,50 +1,211 @@
-# enes100-simulator
+# ENES100 MicroPython Simulator
 
-This is the enes100 simulator replacing the old simulator
+A web-based robot simulator for ENES100 that runs Python code directly in the browser using MicroPython WebAssembly.
 
-## HOW TO UPDATE THE SIMULATOR
+🔗 **Live Simulator:** https://umdenes100.github.io/enes100-simulator/
 
-Clone the repository locally and run `npm install` to install all the dependencies.
+## Features
 
-To run the simulator, run `npm run dev` and click the link the appears in the terminal. Leave this terminal running, it will update the website as you make changes.
+- ✅ **Python Programming** - Write robot control code in Python
+- ✅ **Real-time Simulation** - See your robot move in real-time
+- ✅ **Browser-Based** - No installation required
+- ✅ **Vision System** - Get robot position (X, Y, θ)
+- ✅ **Tank Controls** - Differential drive motors
+- ✅ **Distance Sensors** - Ultrasonic distance measurement
+- ✅ **Mission System** - Support for all 6 ENES100 missions
+- ✅ **Examples** - Built-in example programs
 
-Start by learning the codebase. Look at pretty much every file in /src
- - sim has the simulation code, including the js interpreter stuff.
- - sim/libs has the simulated Arduino libraries (Like Arduino.h, Enes100.h, Tank.h). If you want to change these libraries, change this code.
- - ui has the svelte code for the UI. If you want to change the UI, change this code.
+## Quick Start
 
-Most likely you have been assigned to change an some library, so probably what you want to change is `/src/sim/libs`. There you will find "defines" (`CRASH_SITE` `MATERIAL_TYPE`, etc) and 
-functions like Enes100.begin. You'll get a sense for these functions and be able to add them.
+### Basic Example
 
-Add your name to the list of contributors in `src/ui/About.svelte`. Even for small changes! You are awesome and deserve credit!
+```python
+def setup():
+    # Initialize systems
+    enes100.begin("Team Name", FIRE, 3)
+    tank.begin()
+    
+    # Start driving
+    tank.set_left_motor_pwm(255)
+    tank.set_right_motor_pwm(255)
 
-Make sure to test your changes locally (by interacting with the webpage that appears when you open the link after running npm run dev) and then push the changes to github. This will trigger a rebuild.
+def loop():
+    # Print position
+    enes100.print("X: ")
+    enes100.println(enes100.get_x())
+```
 
-### Reason for creation
+## API Reference
 
-The old simulator used an AWS machine to compile Arduino code,
-simulate the mission, and then send it back to the students.
-It was moderately slow and maintaining the AWS machine was a pain.
+### Enes100 Functions
 
-The new simulator is a web app that runs on the client's machine.
-It is maintained centrally in this repo and allows for the simulation
-to run continously, and the code to just effect the simulation. A lot more like real life.
+```python
+# Initialization
+enes100.begin(team_name, mission_type, marker_id)
 
-## The App
+# Position
+x = enes100.get_x()        # Get X position (meters)
+y = enes100.get_y()        # Get Y position (meters)
+theta = enes100.get_theta() # Get angle (radians)
 
-The app uses svelte.
-`/sim` is where all of the code to actually do simulation and rendering is.
-`/ui` is where all of the svelte components to do ui are.
+# Communication
+enes100.print(message)     # Print without newline
+enes100.println(message)   # Print with newline
 
-### Other notes
+# Mission
+enes100.mission(type, value)
 
-JSCPP had some issues (mainly, not throwing exceptions in some cases) so I made
-my own fork, compiled it, and then put the result in public/JSCPP.es5.js (minified 
-and map file). Which means that if you find an error with JSCPP and want to change
-it, you will probably need to contact me. (Forrest Milner).
+# Status
+visible = enes100.is_visible()
+connected = enes100.is_connected()
+```
 
-The UI buttons uses Material UI from google. If you want to add a 
-button download it from there and put it in ui/buttons (see 
-Editor.svelte for an example on how to import and display images).
-I used all the default settings for the buttons. I think that is a 
-24px image size. But default.
+### Tank Functions
+
+```python
+# Initialization
+tank.begin()
+
+# Motors (PWM: -255 to 255)
+tank.set_left_motor_pwm(speed)
+tank.set_right_motor_pwm(speed)
+tank.turn_off_motors()
+
+# Sensors
+distance = tank.read_distance_sensor(sensor_id)  # Returns meters or -1
+pressed = tank.read_bump_sensor(sensor_id)       # Returns True/False
+```
+
+### Mission Constants
+
+```python
+# Mission Types
+CRASH_SITE, DATA, MATERIAL, FIRE, WATER, SEED
+
+# Crash Site
+DIRECTION, LENGTH, HEIGHT, NORMAL_X, NORMAL_Y
+
+# Data
+CYCLE, MAGNETISM, MAGNETIC, NOT_MAGNETIC
+
+# Material
+WEIGHT, MATERIAL_TYPE, FOAM, PLASTIC, HEAVY, MEDIUM, LIGHT
+
+# Fire
+NUM_CANDLES, TOPOGRAPHY, TOP_A, TOP_B, TOP_C
+
+# Water
+DEPTH, WATER_TYPE, FRESH_UNPOLLUTED, FRESH_POLLUTED
+
+# Seed
+LOCATION, PERCENTAGE
+```
+
+## Code Structure
+
+Your code must define two functions:
+
+- **`setup()`** - Runs once when you click Run
+- **`loop()`** - Runs repeatedly (controlled by speed buttons)
+
+## Controls
+
+- **▶️ Run** - Start executing code
+- **⏸️ Stop** - Stop execution and return to editing
+- **🐢 1x / 🐇 2x / ⚡ 3x** - Control execution speed
+- **📋 Examples** - Load example programs
+- **💾 Save** - Save code to browser (auto-saves every 5 seconds)
+
+## Development
+
+### Setup
+
+```bash
+git clone https://github.com/umdenes100/enes100-simulator.git
+cd enes100-simulator
+npm install
+```
+
+### Run Locally
+
+```bash
+npm run dev
+```
+
+Open http://localhost:5173
+
+### Build for Production
+
+```bash
+npm run build
+```
+
+Output goes to `dist/` directory.
+
+### Deploy
+
+Push to `main` branch - GitHub Actions automatically deploys to GitHub Pages.
+
+## Technical Details
+
+- **Frontend Framework:** Svelte + TypeScript
+- **Build Tool:** Vite
+- **Python Runtime:** MicroPython WebAssembly
+- **Physics Engine:** Custom differential drive simulation
+- **Graphics:** HTML5 Canvas
+
+## File Structure
+
+```
+enes100-simulator/
+├── public/
+│   └── micropython/          # MicroPython WASM files
+├── src/
+│   ├── sim/
+│   │   ├── python-modules/   # Python API (Tank, Enes100, Arduino)
+│   │   ├── code.ts           # Execution engine
+│   │   ├── simulator.ts      # Physics simulation
+│   │   └── render.ts         # Graphics rendering
+│   ├── ui/                   # User interface components
+│   └── state.ts              # Global state management
+└── index.html
+```
+
+## Limitations
+
+- **No time.sleep()** - Use the setup/loop pattern instead
+- **No pin I/O** - Use Tank API instead of digitalWrite/analogWrite
+- **No file system** - All code runs in memory
+- **Browser-only** - Cannot interact with real hardware
+
+## Migrating from C++
+
+The simulator previously used C++/Arduino. Here are the key differences:
+
+| C++ | Python |
+|-----|--------|
+| `void setup()` | `def setup():` |
+| `void loop()` | `def loop():` |
+| `Tank.begin()` | `tank.begin()` |
+| `Enes100.getX()` | `enes100.get_x()` |
+| `delay(1000)` | Not supported - use loop() pattern |
+| `#include "Tank.h"` | Not needed - APIs built-in |
+
+## Support
+
+- **Documentation:** See Help button in simulator
+- **Examples:** Click Examples button for sample code
+- **Issues:** https://github.com/umdenes100/enes100-simulator/issues
+
+## Contributors
+
+- Forrest Milner - Original C++ simulator
+- ENES100 Team - MicroPython migration
+
+## License
+
+MIT License - See LICENSE file for details
+
+---
+
+**University of Maryland ENES100 - Introduction to Engineering Design**

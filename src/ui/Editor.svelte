@@ -31,7 +31,7 @@
     import About from "./About.svelte";
     import Overlay from "./Overlay.svelte";
     import Help from "./Help.svelte";
-    import {completer} from "../sim/completers";
+    // import {completer} from "../sim/completers";
     import {storable} from "../storable";
     import Settings from "./Settings.svelte";
 
@@ -57,7 +57,7 @@
         });
         editor.setTheme("ace/theme/monokai");
         editor.session.setMode("ace/mode/python");
-        setCompleters([completer, textCompleter])
+        // setCompleters([completer, textCompleter])
         let timeout = setInterval(() => save(false), 1000 * 5) // Save every 5 seconds regardless
 
 

@@ -1,4 +1,16 @@
-import { clearOutputWhenRun, delay, output, resetRobot, resetRobotWhenRun } from "../state";
+/**
+ * ENES100 MicroPython Simulator - Main Execution Engine
+ * 
+ * This file handles running student Python code in the browser using MicroPython WASM.
+ * It implements a setup/loop execution model similar to Arduino:
+ * - setup() runs once when code starts
+ * - loop() runs repeatedly at a configurable interval
+ * 
+ * @author ENES100 Team
+ * @version 2.0 (MicroPython)
+ */
+
+import { clearOutputWhenRun, output, resetRobot, resetRobotWhenRun } from "../state";
 import { get, type Writable, writable } from "svelte/store";
 import { generateID } from "./utils";
 import { stopRobot } from "./simulator";
@@ -7,48 +19,74 @@ import { ArduinoAPI, resetArduino } from "./python-modules/arduino";
 import { Enes100API, Enes100Constants, resetEnes100 } from "./python-modules/enes100";
 import { loadMicroPython, runPythonCode } from "./micropython-loader";
 
+// Global MicroPython instance (initialized once on page load)
 let micropython: any = null;
 let isInitialized = false;
 
-// Initialize MicroPython on module load
+/**
+ * Initialize MicroPython and expose JavaScript APIs to Python
+ * Called once when the application loads
+ */
 export async function initMicroPython() {
     if (isInitialized) return;
     
     try {
-        console.log('Loading MicroPython...');
         micropython = await loadMicroPython();
         
-        // Expose APIs to Python via global window object
+        // Expose our JavaScript APIs to Python via global window object
+        // Python can access these via: js.TankAPI.begin(), js.Enes100API.println(), etc.
         (window as any).TankAPI = TankAPI;
         (window as any).ArduinoAPI = ArduinoAPI;
         (window as any).Enes100API = Enes100API;
         (window as any).Enes100Constants = Enes100Constants;
         
         isInitialized = true;
-        console.log('MicroPython initialized successfully!');
     } catch (err) {
         console.error('Failed to initialize MicroPython:', err);
-        output.update(o => o + '\n❌ Failed to load MicroPython: ' + err + '\n');
+        output.update(o => o + '\n❌ Failed to load MicroPython. Please refresh the page.\n');
         throw err;
     }
 }
 
+/**
+ * Session represents a running code execution
+ * - stop: function to halt execution
+ * - running: whether loop() is currently executing
+ * - id: unique identifier for this session
+ */
 type Session = {
     stop: () => void;
     running: boolean;
     id: string;
 }
 
+// Svelte store tracking current execution session (undefined = no code running)
 export const session: Writable<Session | undefined> = writable(undefined);
 
+// Interval handle for loop() execution
 let loopInterval: number | undefined;
 
+/**
+ * Start executing student code
+ * 
+ * @param code - Student's Python code (must define setup() and loop() functions)
+ * @param interval - Milliseconds between loop() calls (default 100ms)
+ * 
+ * Execution flow:
+ * 1. Reset robot state if configured
+ * 2. Inject Python wrapper code (Tank, Enes100 classes, constants)
+ * 3. Run student's code to define setup() and loop()
+ * 4. Call setup() once
+ * 5. Call loop() repeatedly every {interval} milliseconds
+ */
 export async function startCode(code: string, interval: number = 100) {
+    // Verify MicroPython is ready
     if (!isInitialized || !micropython) {
         output.update(o => o + '\n❌ MicroPython not initialized. Please refresh the page.\n');
         return;
     }
     
+    // Clear output and reset robot if settings enabled
     if (get(clearOutputWhenRun)) output.set('');
     if (get(resetRobotWhenRun)) {
         resetRobot();
@@ -58,6 +96,7 @@ export async function startCode(code: string, interval: number = 100) {
         resetEnes100();
     }
     
+    // Create new session
     const sessionId = generateID();
     session.set({
         stop: stopCodeExecution,
@@ -66,49 +105,62 @@ export async function startCode(code: string, interval: number = 100) {
     });
     
     try {
-        // First, set up the Python environment with wrapper code
+        // === STEP 1: Inject Python wrapper code ===
+        // This code creates Tank and Enes100 classes that wrap our JavaScript APIs
+        // It also exposes all constants (FIRE, WATER, etc.)
         const wrapperCode = `
 import js
 
-# Get constants from Enes100
-constants = js.Enes100Constants
+# === ENES100 CONSTANTS ===
+# Mission types
+CRASH_SITE = ${Enes100Constants.CRASH_SITE}
+DATA = ${Enes100Constants.DATA}
+MATERIAL = ${Enes100Constants.MATERIAL}
+FIRE = ${Enes100Constants.FIRE}
+WATER = ${Enes100Constants.WATER}
+SEED = ${Enes100Constants.SEED}
 
-# Expose all Enes100 constants globally
-CRASH_SITE = constants.CRASH_SITE
-DATA = constants.DATA
-MATERIAL = constants.MATERIAL
-FIRE = constants.FIRE
-WATER = constants.WATER
-SEED = constants.SEED
-DIRECTION = constants.DIRECTION
-LENGTH = constants.LENGTH
-HEIGHT = constants.HEIGHT
-NORMAL_X = constants.NORMAL_X
-NORMAL_Y = constants.NORMAL_Y
-CYCLE = constants.CYCLE
-MAGNETISM = constants.MAGNETISM
-MAGNETIC = constants.MAGNETIC
-NOT_MAGNETIC = constants.NOT_MAGNETIC
-WEIGHT = constants.WEIGHT
-MATERIAL_TYPE = constants.MATERIAL_TYPE
-FOAM = constants.FOAM
-PLASTIC = constants.PLASTIC
-HEAVY = constants.HEAVY
-MEDIUM = constants.MEDIUM
-LIGHT = constants.LIGHT
-NUM_CANDLES = constants.NUM_CANDLES
-TOPOGRAPHY = constants.TOPOGRAPHY
-TOP_A = constants.TOP_A
-TOP_B = constants.TOP_B
-TOP_C = constants.TOP_C
-DEPTH = constants.DEPTH
-WATER_TYPE = constants.WATER_TYPE
-FRESH_UNPOLLUTED = constants.FRESH_UNPOLLUTED
-FRESH_POLLUTED = constants.FRESH_POLLUTED
-LOCATION = constants.LOCATION
-PERCENTAGE = constants.PERCENTAGE
+# Crash site
+DIRECTION = ${Enes100Constants.DIRECTION}
+LENGTH = ${Enes100Constants.LENGTH}
+HEIGHT = ${Enes100Constants.HEIGHT}
+NORMAL_X = ${Enes100Constants.NORMAL_X}
+NORMAL_Y = ${Enes100Constants.NORMAL_Y}
 
-# Create Python wrapper for Tank
+# Data
+CYCLE = ${Enes100Constants.CYCLE}
+MAGNETISM = ${Enes100Constants.MAGNETISM}
+MAGNETIC = ${Enes100Constants.MAGNETIC}
+NOT_MAGNETIC = ${Enes100Constants.NOT_MAGNETIC}
+
+# Material
+WEIGHT = ${Enes100Constants.WEIGHT}
+MATERIAL_TYPE = ${Enes100Constants.MATERIAL_TYPE}
+FOAM = ${Enes100Constants.FOAM}
+PLASTIC = ${Enes100Constants.PLASTIC}
+HEAVY = ${Enes100Constants.HEAVY}
+MEDIUM = ${Enes100Constants.MEDIUM}
+LIGHT = ${Enes100Constants.LIGHT}
+
+# Fire
+NUM_CANDLES = ${Enes100Constants.NUM_CANDLES}
+TOPOGRAPHY = ${Enes100Constants.TOPOGRAPHY}
+TOP_A = ${Enes100Constants.TOP_A}
+TOP_B = ${Enes100Constants.TOP_B}
+TOP_C = ${Enes100Constants.TOP_C}
+
+# Water
+DEPTH = ${Enes100Constants.DEPTH}
+WATER_TYPE = ${Enes100Constants.WATER_TYPE}
+FRESH_UNPOLLUTED = ${Enes100Constants.FRESH_UNPOLLUTED}
+FRESH_POLLUTED = ${Enes100Constants.FRESH_POLLUTED}
+
+# Seed
+LOCATION = ${Enes100Constants.LOCATION}
+PERCENTAGE = ${Enes100Constants.PERCENTAGE}
+
+# === TANK CLASS ===
+# Wrapper around JavaScript TankAPI
 class Tank:
     @staticmethod
     def begin():
@@ -134,8 +186,11 @@ class Tank:
     def read_bump_sensor(sensor_id):
         return js.TankAPI.readBumpSensor(sensor_id)
 
+# Create global tank instance
 tank = Tank()
 
+# === ENES100 CLASS ===
+# Wrapper around JavaScript Enes100API
 class Enes100:
     @staticmethod
     def begin(team_name, team_type, marker_id, room=0, tx=0, rx=0):
@@ -173,50 +228,55 @@ class Enes100:
     def mission(mission_type, message):
         return js.Enes100API.mission(mission_type, message)
 
+# Create global enes100 instance
 enes100 = Enes100()
 
+# === HELPER FUNCTIONS ===
 def coordinate(x, y):
+    """Convert x,y coordinates to mission coordinate format"""
     return js.Enes100API.coordinate(x, y)
 
+# Override built-in print to use enes100.println
 _original_print = print
 def print(*args, **kwargs):
     message = ' '.join(str(arg) for arg in args)
     enes100.println(message)
 
-# User's code goes here
+# === USER CODE STARTS HERE ===
 ${code}
 `;
         
-        console.log('Running setup()...');
-        
-        // Run the wrapper + user code to define setup() and loop()
+        // === STEP 2: Run wrapper + user code to define setup() and loop() ===
         await runPythonCode(micropython, wrapperCode);
         
-        // Now call setup() once
+        // === STEP 3: Call setup() once ===
         try {
             await runPythonCode(micropython, 'setup()');
-            console.log('setup() completed');
         } catch (err: any) {
             if (err.message.includes("name 'setup' is not defined")) {
-                output.update(o => o + '\n❌ Error: Your code must define a setup() function\n');
-                throw new Error('setup() function not found');
+                output.update(o => o + '\n❌ Error: Your code must define a setup() function\n\nExample:\ndef setup():\n    tank.begin()\n    enes100.begin("Team", FIRE, 1)\n');
+                session.set(undefined);
+                return;
             }
             throw err;
         }
         
-        // Now call loop() repeatedly
-        console.log('Starting loop()...');
+        // === STEP 4: Call loop() repeatedly ===
         loopInterval = setInterval(async () => {
+            // Check if session still active
+            if (!get(session)) {
+                clearInterval(loopInterval);
+                return;
+            }
+            
             try {
-                if (!get(session)) {
-                    clearInterval(loopInterval);
-                    return;
-                }
                 await runPythonCode(micropython, 'loop()');
             } catch (err: any) {
                 console.error('Error in loop():', err);
                 if (err.message.includes("name 'loop' is not defined")) {
-                    output.update(o => o + '\n❌ Error: Your code must define a loop() function\n');
+                    output.update(o => o + '\n❌ Error: Your code must define a loop() function\n\nExample:\ndef loop():\n    enes100.println("Running...")\n');
+                } else {
+                    output.update(o => o + '\n❌ Error in loop(): ' + err.message + '\n');
                 }
                 clearInterval(loopInterval);
                 session.set(undefined);
@@ -231,6 +291,12 @@ ${code}
     }
 }
 
+/**
+ * Stop code execution
+ * - Clears the loop() interval
+ * - Resets session to undefined
+ * - Allows user to edit code again
+ */
 function stopCodeExecution() {
     if (loopInterval) {
         clearInterval(loopInterval);
@@ -239,11 +305,15 @@ function stopCodeExecution() {
     session.set(undefined);
 }
 
+/**
+ * Public stop function (called by UI buttons)
+ */
 export function stopCode() {
     stopCodeExecution();
 }
 
-// Compatibility exports
+// === LEGACY EXPORTS ===
+// These are kept for backwards compatibility but not actively used
 export const ignored_variables = new Set<string>();
 export function addIgnoredVariable(v: string) {
     ignored_variables.add(v);
