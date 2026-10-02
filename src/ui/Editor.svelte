@@ -12,16 +12,17 @@
     import {code, showVariables} from "../state";
     import VariablesTable from "./VariablesTable.svelte";
     import stopSVG from "./buttons/stop.svg";
-    import continueSVG from "./buttons/resume.svg";
-    import pauseSVG from "./buttons/pause.svg";
-    import stepSVG from "./buttons/step.svg";
+    // Unused while Continue/Pause/Step are disabled -- see mismatch log item #2/#7.
+    // import continueSVG from "./buttons/resume.svg";
+    // import pauseSVG from "./buttons/pause.svg";
+    // import stepSVG from "./buttons/step.svg";
     import showSVG from "./buttons/show.svg";
     import hideSVG from "./buttons/hide.svg";
     import playSVG from "./buttons/play.svg";
     import saveSVG from "./buttons/save.svg";
-    import speed1SVG from "./buttons/speed1.svg";
-    import speed2SVG from "./buttons/speed2.svg";
-    import speed3SVG from "./buttons/speed3.svg";
+    // import speed1SVG from "./buttons/speed1.svg";
+    // import speed2SVG from "./buttons/speed2.svg";
+    // import speed3SVG from "./buttons/speed3.svg";
     import examplesSVG from "./buttons/examples.svg";
     import infoSVG from "./buttons/info.svg";
     import helpSVG from "./buttons/help.svg";
@@ -151,23 +152,29 @@
         {#if $session}
             <button on:click={() => {$session?.stop(); resize()}} title="Stop session / edit code">
                 <img src={stopSVG} alt=""></button>
+            <!--
+                Continue/Pause/Step are disabled: the Python execution model
+                (setup() once, then loop() on an interval) has no step-by-step
+                debugger to back these buttons. See mismatch log item #2/#7.
+                Restore if/when a step debugger is implemented.
             <button on:click={$session.continue} title="Continue code" disabled={$session.running}>
                 <img src={continueSVG} alt=""></button>
             <button on:click={$session.pause} title="Pause code {!$session.running ? '(only available once continued)' : ''}" disabled={!$session.running}>
                 <img src={pauseSVG} alt=""></button>
             <button on:click={$session.step} title="Run next line" disabled={$session.running}>
                 <img src={stepSVG} alt=""></button>
+            -->
             <button on:click={() => showVariables.update((v) => !v)}
                     title={$showVariables ? 'Hide Variables' : 'Show Variables'}>
                 <img src={$showVariables ? hideSVG : showSVG} alt=""></button>
         {:else}
             <button on:click={run} title="Run code">
                 <img src={playSVG} alt=""></button>
-            <button on:click={() => $intervalIndex = ($intervalIndex+1) % 3}
+            <!-- <button on:click={() => $intervalIndex = ($intervalIndex+1) % 3}
                     title={['slow', 'normal', 'instant'][$intervalIndex] + ' code execution speed'}>
                 <img src={[speed1SVG, speed2SVG, speed3SVG][$intervalIndex]} alt={['slow', 'normal', 'fast'][$intervalIndex]}
                      style="transform: rotate(90deg)">
-            </button>
+            </button> -->
             <button on:click={() => save(true)} title="Save code to browser. (automatically saved every 5s)">
                 <img src={saveSVG} alt=""></button>
             <button on:click={() => showExampleSelector = true} title="Load an example">

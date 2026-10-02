@@ -18,6 +18,7 @@ import { TankAPI, resetTank } from "./python-modules/tank";
 import { ArduinoAPI, resetArduino } from "./python-modules/arduino";
 import { Enes100API, Enes100Constants, resetEnes100 } from "./python-modules/enes100";
 import { loadMicroPython, runPythonCode } from "./micropython-loader";
+import { transformForAsyncSleep } from "./asyncTransform";
 
 // Global MicroPython instance (initialized once on page load)
 let micropython: any = null;
@@ -39,6 +40,13 @@ export async function initMicroPython() {
         (window as any).ArduinoAPI = ArduinoAPI;
         (window as any).Enes100API = Enes100API;
         (window as any).Enes100Constants = Enes100Constants;
+        
+        // Bridge used by our Python `time.sleep()` replacement (see wrapperCode
+        // in startCode). Returns a real Promise, so `await`-ing it in Python
+        // yields control back to the browser instead of freezing it.
+        (window as any).asyncSleep = (ms: number) => {
+            return new Promise((resolve) => setTimeout(resolve, ms));
+        };
         
         isInitialized = true;
     } catch (err) {
@@ -63,8 +71,10 @@ type Session = {
 // Svelte store tracking current execution session (undefined = no code running)
 export const session: Writable<Session | undefined> = writable(undefined);
 
-// Interval handle for loop() execution
-let loopInterval: number | undefined;
+// Timeout handle for the next scheduled loop() call.
+// This is a self-rescheduling setTimeout chain, not setInterval --
+// see runLoopStep() in startCode() for why.
+let loopTimeoutHandle: number | undefined;
 
 /**
  * Start executing student code
@@ -231,6 +241,24 @@ class Enes100:
 # Create global enes100 instance
 enes100 = Enes100()
 
+# === TIME CLASS ===
+# Replaces the built-in time module's sleep functions with versions that
+# actually pause (via a real JS Promise) without freezing the browser tab.
+# Student code never sees async/await directly -- calls to functions that
+# (directly or indirectly) use time.sleep() are automatically rewritten by
+# the simulator to use await under the hood.
+class _Time:
+    @staticmethod
+    async def sleep(seconds):
+        await js.asyncSleep(int(seconds * 1000))
+    
+    @staticmethod
+    async def sleep_ms(ms):
+        await js.asyncSleep(ms)
+
+# Create global time instance (shadows any built-in time module by name)
+time = _Time()
+
 # === HELPER FUNCTIONS ===
 def coordinate(x, y):
     """Convert x,y coordinates to mission coordinate format"""
@@ -243,7 +271,7 @@ def print(*args, **kwargs):
     enes100.println(message)
 
 # === USER CODE STARTS HERE ===
-${code}
+${transformForAsyncSleep(code)}
 `;
         
         // === STEP 2: Run wrapper + user code to define setup() and loop() ===
@@ -251,7 +279,7 @@ ${code}
         
         // === STEP 3: Call setup() once ===
         try {
-            await runPythonCode(micropython, 'setup()');
+            await runPythonCode(micropython, 'await setup()');
         } catch (err: any) {
             if (err.message.includes("name 'setup' is not defined")) {
                 output.update(o => o + '\n❌ Error: Your code must define a setup() function\n\nExample:\ndef setup():\n    tank.begin()\n    enes100.begin("Team", FIRE, 1)\n');
@@ -262,15 +290,23 @@ ${code}
         }
         
         // === STEP 4: Call loop() repeatedly ===
-        loopInterval = setInterval(async () => {
-            // Check if session still active
-            if (!get(session)) {
-                clearInterval(loopInterval);
+        // NOTE: This is deliberately NOT setInterval. Now that loop() can
+        // genuinely take longer than `interval` (e.g. it contains a real
+        // time.sleep()), firing on a fixed clock could start a second
+        // loop() call before the first has finished. Instead, each call
+        // waits for the previous one to fully complete before scheduling
+        // the next -- a self-rescheduling chain.
+        //
+        // The sessionId check (rather than just checking `session` is set)
+        // guards against a stop+run-again happening fast enough that an
+        // old chain and a new chain could both be scheduling calls at once.
+        const runLoopStep = async () => {
+            if (get(session)?.id !== sessionId) {
                 return;
             }
             
             try {
-                await runPythonCode(micropython, 'loop()');
+                await runPythonCode(micropython, 'await loop()');
             } catch (err: any) {
                 console.error('Error in loop():', err);
                 if (err.message.includes("name 'loop' is not defined")) {
@@ -278,10 +314,16 @@ ${code}
                 } else {
                     output.update(o => o + '\n❌ Error in loop(): ' + err.message + '\n');
                 }
-                clearInterval(loopInterval);
                 session.set(undefined);
+                return;
             }
-        }, interval);
+            
+            if (get(session)?.id === sessionId) {
+                loopTimeoutHandle = setTimeout(runLoopStep, interval);
+            }
+        };
+        
+        loopTimeoutHandle = setTimeout(runLoopStep, interval);
         
     } catch (err: any) {
         console.error('Python execution error:', err);
@@ -298,9 +340,9 @@ ${code}
  * - Allows user to edit code again
  */
 function stopCodeExecution() {
-    if (loopInterval) {
-        clearInterval(loopInterval);
-        loopInterval = undefined;
+    if (loopTimeoutHandle) {
+        clearTimeout(loopTimeoutHandle);
+        loopTimeoutHandle = undefined;
     }
     session.set(undefined);
 }

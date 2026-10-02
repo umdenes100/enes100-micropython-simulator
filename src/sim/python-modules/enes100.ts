@@ -108,30 +108,29 @@ export const Enes100API = {
         const name = String(_teamName).replace(/"/g, '');
         teamName.set(name);
         
-        // Validate team type
-        if (typeof _teamType !== 'number' || _teamType < 0 || _teamType > 5) {
+        // Validate team type -- matches C++ exactly: convert to string, strip
+        // quotes, then check if it's numeric. No range check (0-5) is done,
+        // same as the original -- an out-of-range number like 99 is accepted.
+        const teamTypeString = String(_teamType).replace(/"/g, '');
+        if (!isNaN(Number(teamTypeString))) {
+            teamType.set(Number(teamTypeString));
+        } else {
             throw new Error(
-                `Invalid team type: ${_teamType}\n` +
-                `Valid values:\n` +
-                `  CRASH_SITE (0), DATA (1), MATERIAL (2)\n` +
-                `  FIRE (3), WATER (4), SEED (5)\n` +
-                `Remember to use the constant, not a string!\n` +
-                `Correct: FIRE\n` +
-                `Wrong: "FIRE"`
+                `In enes100.begin, you used an invalid team type: ${teamTypeString}. ` +
+                `Remember, team type is not a string! (Ex: should be FIRE not "FIRE")`
             );
         }
-        teamType.set(_teamType);
         
-        // Validate marker ID
-        if (typeof _markerId !== 'number') {
+        // Validate marker ID -- same pattern, no range check.
+        const markerIdString = String(_markerId).replace(/"/g, '');
+        if (!isNaN(Number(markerIdString))) {
+            markerId.set(Number(markerIdString));
+        } else {
             throw new Error(
-                `Invalid marker ID: ${_markerId}\n` +
-                `Marker ID must be a number, not a string.\n` +
-                `Correct: 1\n` +
-                `Wrong: "1"`
+                `In enes100.begin, you used an invalid marker ID: ${markerIdString}. ` +
+                `Remember, marker ID is not a string! (Ex: should be 1 not "1")`
             );
         }
-        markerId.set(_markerId);
         
         begun = true;
     },

@@ -117,7 +117,10 @@ export async function runPythonCode(mp: any, code: string): Promise<string> {
         });
 
         // Execute the Python code
-        await mp.runPython(code);
+        // NOTE: runPythonAsync (not runPython) is required so that top-level
+        // `await` works. This is what allows our custom time.sleep()
+        // implementation to actually pause without freezing the browser tab.
+        await mp.runPythonAsync(code);
         
         return stdout;
     } catch (err: any) {

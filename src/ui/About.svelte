@@ -23,48 +23,59 @@
 
 <h1><img src={infoSVG} alt="" style="height: 100%">About this runtime</h1>
 <small style="display: flex; align-items: center; gap: 5px">For help please click on the <img src={helpSVG} alt=""> button on the main page.</small>
-<h2>Inconsistencies with Arduino Environment</h2>
+<h2>Known Limitations</h2>
 <ol>
-    <li>An int is 4 bytes, unlike 2 bytes on an Arduino. See <a href="https://github.com/felixhao28/JSCPP/tree/master">here</a>
-        for more information on the limits of the integer types.
+    <li>Unlike real hardware, this simulator has no physical pins -- there is no <code>machine.Pin</code>,
+        no GPIO, and nothing to read or write real voltages. Use the <code>tank</code> and <code>enes100</code>
+        objects to control and sense the simulated robot instead.
     </li>
-    <li>Arduino functions that manipulate pins obviously do not work. (pinMode, digitalWrite).</li>
-    <li>micros and delayMicroseconds are only accurate to the nearest millisecond. (so use millis and delay)</li>
+    <li>There is currently no step-by-step debugger. You cannot pause mid-program, single-step through
+        lines, or inspect a live variables table while a program is running -- your program simply runs
+        from start to finish (<code>setup()</code> once, then <code>loop()</code> repeatedly) once you click Run.
+    </li>
+    <li>Python integers do not overflow the way C++ integers do -- you generally don't need to worry about
+        running out of range on whole numbers.</li>
 </ol>
 
 <h2>How does this runtime work</h2>
-<div>This runtime is interpreting C++ code in the browser. C++ is typically a compiled language but to allow for a better debugging
-    experience we are using a runtime. The simulator will first parse your code, then execute it line by line. The parser must be 100%
-    successful (which is why a forgotten semicolon will not allow you to run any lines). Then the runtime executes code, like
-    assigning and reading variables. If a variable does not exist or is misspelled, the parser will be happy, but the runtime will not,
-    and you'll see an error when that line is ran.
+<div>This runtime runs real Python using MicroPython, compiled to WebAssembly so it can run directly in your browser --
+    there is no server involved. Your code must define two functions: <code>setup()</code>, which runs once when you click
+    Run, and <code>loop()</code>, which then runs over and over until you click Stop. Errors (like a typo in a variable
+    name, or a missing colon) are reported by the real Python interpreter, using normal Python error messages.
 </div>
 
 <h2>Supported Libraries</h2>
-<div>The runtime is <a href="https://github.com/felixhao28/JSCPP">https://github.com/felixhao28/JSCPP</a>.</div>
+<div>The runtime is <a href="https://github.com/micropython/micropython" target="_blank">MicroPython</a>,
+    run in the browser via its official WebAssembly build.
+</div>
 
 <div>
-    The following libraries are supported in this runtime. Note: You must include the libraries before including Arduino.h.
+    The following are available in your code. Nothing needs to be imported to use <code>tank</code> or
+    <code>enes100</code> -- they're ready to use as soon as your program starts.
 </div>
 <ul>
-    <li>iostream (only cout and endl) (cin will load, but there is not way to input data)</li>
     <li>
-        <div>cmath</div>
-        <small>many of the math functions are implemented by the Arduino.h library.
-            To see which ones are implemented, start an example sketch, click "Show Variables" (if hidden) and
-            then "Show Arduino Functions"</small></li>
-    <li>cctype</li>
-    <li>
-        <div>cstring</div>
-        <small>strcpy and other related functions.</small>
+        <div><code>enes100</code></div>
+        <small>The course-specific object for vision system positioning and WiFi communication -- see
+            <a href="https://enes100.umd.edu/libraries/enes100" target="_blank">the Enes100 library docs</a>
+            for the underlying real-hardware API this mirrors.</small>
     </li>
     <li>
-        <div>cstdio</div>
-        <small>partial implementation. Includes printf, which is not standard in Arduino.</small>
+        <div><code>tank</code></div>
+        <small>The course-specific object for motor control and sensors -- see
+            <a href="https://enes100.umd.edu/libraries/tank" target="_blank">the Tank library docs</a>
+            for the underlying real-hardware API this mirrors.</small>
     </li>
-    <li><a href="https://enes100.umd.edu/libraries/enes100" target="_blank">Enes100.h</a></li>
-    <li><a href="https://enes100.umd.edu/libraries/tank" target="_blank">Tank.h</a></li>
-    <li>Most functions and defines in Arduino.h</li>
+    <li>
+        <div><code>time.sleep(seconds)</code> and <code>time.sleep_ms(milliseconds)</code></div>
+        <small>Pause your program without freezing the simulator. These work inside <code>setup()</code>,
+            <code>loop()</code>, and any function you write yourself.</small>
+    </li>
+    <li>
+        <div>Standard MicroPython modules</div>
+        <small>including <code>math</code> and <code>random</code>. Regular Python built-ins
+            (<code>print</code>, <code>range</code>, <code>len</code>, etc.) all work as expected.</small>
+    </li>
 </ul>
 
 <div>

@@ -10,42 +10,87 @@
  * @version 2.0 (MicroPython)
  */
 
-export const testExample = `# TBD
-`
-
-export const basicExample = `# Basic Example - Drive Forward
-# This example shows the fundamental setup/loop pattern
+export const testExample = `# Test Example - Complete example with every single Enes100 function.
 
 def setup():
-    """Initialize robot and start driving"""
-    # Always initialize enes100 first
-    enes100.begin("Simulator", FIRE, 3)
-    
-    # Then initialize tank
+    enes100.begin("Simulator", DATA, 3, 1116, 8, 9)
+    enes100.println(257)
+    enes100.println(True)
+    enes100.println("Hello, World!")
+    enes100.println(1.0)
+    x = enes100.get_x()
+    enes100.println(x)
+    enes100.println(enes100.get_y())
+    enes100.println(enes100.get_theta())
+    enes100.println(enes100.is_visible())
+    enes100.println(enes100.is_connected())
+
+    # A little test script that should put the simulator through its paces.
+    enes100.begin("Simulator", CRASH_SITE, 3, 1116, 8, 9)
+    enes100.mission(LENGTH, 1000)
+    enes100.mission(HEIGHT, 1000)
+    enes100.mission(DIRECTION, NORMAL_X)
+    enes100.mission(DIRECTION, NORMAL_Y)
+
+    enes100.begin("Simulator", DATA, 3, 1116, 8, 9)
+    enes100.mission(CYCLE, 10)
+    enes100.mission(MAGNETISM, MAGNETIC)
+    enes100.mission(MAGNETISM, NOT_MAGNETIC)
+
+    enes100.begin("Simulator", MATERIAL, 3, 1116, 8, 9)
+    enes100.mission(WEIGHT, HEAVY)
+    enes100.mission(WEIGHT, MEDIUM)
+    enes100.mission(WEIGHT, LIGHT)
+    enes100.mission(MATERIAL_TYPE, FOAM)
+    enes100.mission(MATERIAL_TYPE, PLASTIC)
+
+    enes100.begin("Simulator", FIRE, 3, 1116, 8, 9)
+    enes100.mission(NUM_CANDLES, 3)
+    enes100.mission(TOPOGRAPHY, TOP_A)
+    enes100.mission(TOPOGRAPHY, TOP_B)
+    enes100.mission(TOPOGRAPHY, TOP_C)
+
+    enes100.begin("Simulator", WATER, 3, 1116, 8, 9)
+    enes100.mission(DEPTH, 1000)
+    enes100.mission(WATER_TYPE, FRESH_UNPOLLUTED)
+    enes100.mission(WATER_TYPE, FRESH_POLLUTED)
+
+    enes100.begin("Simulator", SEED, 3, 1116, 8, 9)
+    enes100.mission(PERCENTAGE, 100)
+    # In the simulator, coordinate only works in this way. You cannot declare coordinate objects.
+    enes100.mission(LOCATION, coordinate(100, 100))
+    enes100.mission(LOCATION, coordinate(200, 200))
+
+    tank.begin()
+    tank.set_left_motor_pwm(100)
+    tank.set_right_motor_pwm(100)
+
+    time.sleep(1)
+    tank.turn_off_motors()
+
+def loop():
+    time.sleep(1)
+    enes100.println("Hello, World! (from loop)")
+`
+
+export const basicExample = `# Basic Example
+
+def setup():
+    enes100.begin("Simulator", FIRE, 3, 1116, 8, 9)
     tank.begin()
     
-    # Print startup message
-    enes100.println("🚀 Starting simulator...")
-    enes100.println("Robot will drive forward")
-    
-    # Set motors to full speed forward
+    enes100.println("Starting driving")
     tank.set_left_motor_pwm(255)
     tank.set_right_motor_pwm(255)
 
 def loop():
-    """Print position repeatedly"""
-    # Get current position
-    x = enes100.get_x()
-    y = enes100.get_y()
-    theta = enes100.get_theta()
-    
-    # Print formatted position
-    enes100.print("Position: X=")
-    enes100.print(x)
-    enes100.print(" Y=")
-    enes100.print(y)
-    enes100.print(" θ=")
-    enes100.println(theta)
+    time.sleep(1)
+    enes100.print("X = ")
+    enes100.println(enes100.get_x())
+    enes100.print("Y = ")
+    enes100.println(enes100.get_y())
+    enes100.print("Theta = ")
+    enes100.println(enes100.get_theta())
 `
 
 export const turnExample = `# Turn Example - Spin in Place
@@ -117,7 +162,6 @@ def setup():
     
     # Test CRASH_SITE mission
     enes100.println("=== CRASH_SITE Mission ===")
-    enes100.begin("Team", CRASH_SITE, 1)
     enes100.mission(DIRECTION, NORMAL_X)
     enes100.mission(LENGTH, 1000)
     enes100.mission(HEIGHT, 500)
@@ -161,7 +205,7 @@ def setup():
     enes100.println("✅ All missions tested!")
 
 def loop():
-    time(1)
+    time.sleep(1)
 `
 
 export const stopExample = `# Stop Example - Conditional Motor Control
