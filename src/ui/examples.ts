@@ -61,6 +61,18 @@ def setup():
     enes100.mission(LOCATION, coordinate(100, 100))
     enes100.mission(LOCATION, coordinate(200, 200))
 
+    enes100.begin("Simulator", HYDROGEN, 3, 1116, 8, 9)
+    enes100.mission(LED_COLOR, WHITE)
+    enes100.mission(LED_COLOR, RED)
+    enes100.mission(LED_COLOR, YELLOW)
+    enes100.mission(LED_COLOR, GREEN)
+    enes100.mission(LED_COLOR, BLUE)
+    enes100.mission(VOLTAGE_OUTPUT, VOLTAGE_1)
+    enes100.mission(VOLTAGE_OUTPUT, VOLTAGE_2)
+    enes100.mission(VOLTAGE_OUTPUT, VOLTAGE_3)
+    enes100.mission(VOLTAGE_OUTPUT, VOLTAGE_4)
+    enes100.mission(VOLTAGE_OUTPUT, VOLTAGE_5)
+
     tank.begin()
     tank.set_left_motor_pwm(100)
     tank.set_right_motor_pwm(100)

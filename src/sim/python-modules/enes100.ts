@@ -37,6 +37,9 @@ export const Enes100Constants = {
     FIRE: 3,
     WATER: 4,
     SEED: 5,
+    // Added hydrogen mission
+    // Maggie Crooks, 11/2/26
+    HYDROGEN: 6,
     
     // Crash site mission
     DIRECTION: 0,
@@ -76,6 +79,22 @@ export const Enes100Constants = {
     // Seed mission
     LOCATION: 0,
     PERCENTAGE: 1,
+
+    // Added hydrogen mission
+    // Maggie Crooks, 11/2/26
+    // Hydrogen mission
+    LED_COLOR: 0,
+    VOLTAGE_OUTPUT: 1,
+    WHITE: 0,
+    RED: 1,
+    YELLOW: 2,
+    GREEN: 3,
+    BLUE: 4,
+    VOLTAGE_1: 0,
+    VOLTAGE_2: 1,
+    VOLTAGE_3: 2,
+    VOLTAGE_4: 3,
+    VOLTAGE_5: 4,
 };
 
 /**
@@ -283,6 +302,12 @@ export const Enes100API = {
             5: { // SEED
                 0: (msg: number) => `The location of the anomaly is ${round(msg / 1000)},${msg % 1000}`,
                 1: (msg: number) => `The percentage of the anomaly is ${msg}`,
+            },
+            // Added hydrogen mission
+            // Maggie Crooks, 11/2/26
+            6: { // HYDROGEN
+                0: (msg: number) => `The color of the LED is ${['WHITE', 'RED', 'YELLOW', 'GREEN', 'BLUE'][msg]}.`,
+                1: (msg: number) => `The voltage of the hydrogen cell is ${['1 VOLT', '2 VOLTS', '3 VOLTS', '4 VOLTS', '5 VOLTS'][msg]}.`,
             }
         };
         

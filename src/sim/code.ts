@@ -92,7 +92,7 @@ let loopTimeoutHandle: number | undefined;
 export async function startCode(code: string, interval: number = 100) {
     // Verify MicroPython is ready
     if (!isInitialized || !micropython) {
-        output.update(o => o + '\n❌ MicroPython not initialized. Please refresh the page.\n');
+        output.update(o => o + '\nMicroPython not initialized. Please refresh the page.\n');
         return;
     }
     
@@ -129,6 +129,7 @@ MATERIAL = ${Enes100Constants.MATERIAL}
 FIRE = ${Enes100Constants.FIRE}
 WATER = ${Enes100Constants.WATER}
 SEED = ${Enes100Constants.SEED}
+HYDROGEN = ${Enes100Constants.HYDROGEN}
 
 # Crash site
 DIRECTION = ${Enes100Constants.DIRECTION}
@@ -168,6 +169,21 @@ FRESH_POLLUTED = ${Enes100Constants.FRESH_POLLUTED}
 # Seed
 LOCATION = ${Enes100Constants.LOCATION}
 PERCENTAGE = ${Enes100Constants.PERCENTAGE}
+
+# Hydrogen
+LED_COLOR = ${Enes100Constants.LED_COLOR}
+VOLTAGE_OUTPUT = ${Enes100Constants.VOLTAGE_OUTPUT}
+WHITE = ${Enes100Constants.WHITE}
+RED = ${Enes100Constants.RED}
+YELLOW = ${Enes100Constants.YELLOW}
+GREEN = ${Enes100Constants.GREEN}
+BLUE = ${Enes100Constants.BLUE}
+VOLTAGE_1 = ${Enes100Constants.VOLTAGE_1}
+VOLTAGE_2 = ${Enes100Constants.VOLTAGE_2}
+VOLTAGE_3 = ${Enes100Constants.VOLTAGE_3}
+VOLTAGE_4 = ${Enes100Constants.VOLTAGE_4}
+VOLTAGE_5 = ${Enes100Constants.VOLTAGE_5}
+
 
 # === TANK CLASS ===
 # Wrapper around JavaScript TankAPI
@@ -310,9 +326,9 @@ ${transformForAsyncSleep(code)}
             } catch (err: any) {
                 console.error('Error in loop():', err);
                 if (err.message.includes("name 'loop' is not defined")) {
-                    output.update(o => o + '\n❌ Error: Your code must define a loop() function\n\nExample:\ndef loop():\n    enes100.println("Running...")\n');
+                    output.update(o => o + '\nError: Your code must define a loop() function\n\nExample:\ndef loop():\n    enes100.println("Running...")\n');
                 } else {
-                    output.update(o => o + '\n❌ Error in loop(): ' + err.message + '\n');
+                    output.update(o => o + '\nError in loop(): ' + err.message + '\n');
                 }
                 session.set(undefined);
                 return;
@@ -328,7 +344,7 @@ ${transformForAsyncSleep(code)}
     } catch (err: any) {
         console.error('Python execution error:', err);
         const errorMsg = err.message || String(err);
-        output.update(o => o + '\n❌ Error: ' + errorMsg + '\n');
+        output.update(o => o + '\nError: ' + errorMsg + '\n');
         session.set(undefined);
     }
 }
