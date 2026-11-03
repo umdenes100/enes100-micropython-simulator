@@ -213,8 +213,15 @@ def setup():
     enes100.mission(PERCENTAGE, 42)
     enes100.mission(LOCATION, coordinate(150, 200))
     enes100.println("")
+
+    # Test HYDROGEN mission
+    enes100.println("=== HYDROGEN Mission ===")
+    enes100.begin("Team", HYDROGEN, 1)
+    enes100.mission(LED_COLOR, BLUE)
+    enes100.mission(VOLTAGE_OUTPUT, VOLTAGE_3)
+    enes100.println("")
     
-    enes100.println("✅ All missions tested!")
+    enes100.println("All missions tested!")
 
 def loop():
     time.sleep(1)
